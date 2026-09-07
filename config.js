@@ -12,7 +12,7 @@ export const C = {
   markets:[{name:'セントラル市場',label:'CENTRAL EXCHANGE',factor:1,target:90,consume:1.2,supply:1,fee:2,entry:0,survey:0,time:0},
     {name:'沿岸工業圏',label:'COASTAL INDUSTRIES',factor:1.22,target:65,consume:1.1,supply:.85,fee:5,entry:1800,survey:600,time:25},
     {name:'高地輸送圏',label:'HIGHLAND TRANSPORT',factor:1.4,target:50,consume:.9,supply:.7,fee:9,entry:2600,survey:850,time:35}],
-  marketCap:260, stockFloor:0, priceMin:.45,priceMax:2.2,elasticity:.8,spread:.08,tradeCap:90,tradeRefill:1.5,maxOrder:80,quoteLife:8,
+  marketCap:260, stockFloor:0, priceMin:.45,priceMax:2.2,elasticity:.8,spread:.08,tradeCap:90,tradeRefill:1.5,maxOrder:80,quoteLife:10,
   rocket:{cost:3000,materials:35,parts:30,time:90,capacity:30,fuel:15,operating:350,boarding:14,countdown:6,flight:35,maintenance:15,upgrade:2000,upgradeParts:12,maxLevel:3},
   applicantInterval:5, upgradeCost:1300, upgradeMaterials:12
 };
