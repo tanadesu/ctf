@@ -1,6 +1,7 @@
 import { C } from './config.js';
 import {createMarkets, marketTick,quote,price} from './economy.js';
 export function player(name,id){return{id,name:name.slice(0,20),ready:false,cash:C.initialCash,inventory:{materials:30,parts:0,fuel:0},buildings:[{type:'materials',slot:5,level:1,readyAt:0,nextAt:8,status:'稼働中'},{type:'port',slot:9,level:1,readyAt:0,nextAt:0,status:'稼働中'}],access:[2,0,0],surveys:{},waiting:0,nextApplicant:5,score:0,launches:0,rocket:null,sales:0,costs:{production:0,trade:0,operation:0,investment:0,research:0},produced:{materials:0,parts:0,fuel:0},events:[]};}
+function ensureDefaultFacilities(p){if(!p.buildings.some(b=>b.type==='port'))p.buildings.push({type:'port',slot:9,level:1,readyAt:0,nextAt:0,status:'稼働中'});}
 export function room(code){return{code,phase:'lobby',elapsed:0,paused:false,players:[],markets:createMarkets(),events:[],epoch:0};}
 const spend=(p,c,kind,goods={})=>{if(p.cash<c)throw Error(`資金が不足しています（必要 ¥${c.toLocaleString()}）`);for(const [g,n]of Object.entries(goods))if(p.inventory[g]<n)throw Error(`${C.goods[g].name}が${n-p.inventory[g]}個不足しています`);p.cash-=c;p.costs[kind]+=c;for(const [g,n]of Object.entries(goods))p.inventory[g]-=n;};
 export const active=(p,type,t)=>p.buildings.filter(b=>b.type===type&&b.readyAt<=t);
@@ -8,6 +9,7 @@ export function shipSpec(r){return{capacity:C.rocket.capacity+(r.capacity-1)*15,
 function dispatch(r,p,n){const ship=p.rocket;if(!ship||ship.phase!=='idle')throw Error('輸送船の準備が完了していません');const s=shipSpec(ship);if(!Number.isInteger(n)||n<1||n>s.capacity||n>p.waiting)throw Error('搭乗人数を確認してください');spend(p,C.rocket.operating,'operation',{fuel:s.fuel});p.waiting-=n;ship.passengers=n;ship.phase='boarding';ship.until=r.elapsed+C.rocket.boarding;ship.reason='';}
 function event(r,p,text){r.events.unshift({at:r.elapsed,player:p.id,text});r.events.length=Math.min(r.events.length,20);}
 export function command(r,p,a){
+ ensureDefaultFacilities(p);
  if(a.type==='ready'){if(r.phase!=='lobby')throw Error('開始済みです');p.ready=true;if(r.players.length===2&&r.players.every(x=>x.ready)){r.phase='playing';r.elapsed=0;}return;}
  if(a.type==='rematch'){if(r.phase!=='ended')throw Error('試合終了後に再戦できます');p.rematch=true;if(r.players.every(x=>x.rematch)){r.players=r.players.map(x=>player(x.name,x.id));r.phase='lobby';r.elapsed=0;r.markets=createMarkets();r.events=[];r.epoch++;}return;}
  if(r.phase!=='playing'||r.paused)throw Error('試合が進行中ではありません');
