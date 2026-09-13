@@ -12,6 +12,7 @@ export function command(r,p,a){
  ensureDefaultFacilities(p);
  if(a.type==='ready'){if(r.phase!=='lobby')throw Error('開始済みです');p.ready=true;if(r.players.length===2&&r.players.every(x=>x.ready)){r.phase='playing';r.elapsed=0;}return;}
  if(a.type==='rematch'){if(r.phase!=='ended')throw Error('試合終了後に再戦できます');p.rematch=true;if(r.players.every(x=>x.rematch)){r.players=r.players.map(x=>player(x.name,x.id));r.phase='lobby';r.elapsed=0;r.markets=createMarkets();r.events=[];r.epoch++;}return;}
+ if(a.type==='pause'){if(r.phase!=='playing')throw Error('試合中のみ中断できます');r.paused=!r.paused;return;}
  if(r.phase!=='playing'||r.paused)throw Error('試合が進行中ではありません');
  switch(a.type){
  case 'build': {const b=C.buildings[a.building];if(!Object.hasOwn(C.buildings,a.building)||!b||!Number.isInteger(a.slot)||a.slot<0||a.slot>=24)throw Error('区画または施設が不正です');if(p.buildings.some(x=>x.slot===a.slot))throw Error('取得済み区画です');if(a.building==='port'&&p.buildings.some(x=>x.type==='port'))throw Error('宇宙港は1社1か所です');spend(p,b.cost,'investment',{materials:b.materials});p.buildings.push({type:a.building,slot:a.slot,level:1,readyAt:r.elapsed+b.time,nextAt:r.elapsed+b.time+(C.goods[a.building]?.cycle||0),status:'建設中'});break;}
