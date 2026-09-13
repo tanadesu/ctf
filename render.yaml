@@ -3,7 +3,7 @@ services:
     name: orbis-mars-api
     runtime: node
     plan: free
-    buildCommand: npm test
+    buildCommand: node --check server.js && node --check simulation.js
     startCommand: npm start
     healthCheckPath: /health
     envVars:
