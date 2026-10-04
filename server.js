@@ -32,8 +32,10 @@ const server=http.createServer(async(req,res)=>{
  let raw='';for await(const chunk of req){raw+=chunk;if(raw.length>16384)return send(res,413,{error:'リクエストが大きすぎます'});}let body;try{body=JSON.parse(raw||'{}');}catch{return send(res,400,{error:'JSONが不正です'});}
  sync();
  if(url.pathname==='/api/create'||url.pathname==='/api/join'){
+ const companyName=typeof body.name==='string'?body.name.trim():'';
+ if(!companyName)throw Error('会社名を入力してください');
  let r;if(url.pathname.endsWith('create')){if(rooms.size>=100)throw Error('ルーム上限です。運営にご連絡ください');let code;do{code=randomBytes(3).toString('hex').toUpperCase();}while(rooms.has(code));r=room(code,body.gameMode==='easy'?'easy':'normal');rooms.set(code,r);}else{r=rooms.get(String(body.code).toUpperCase().trim());if(!r)throw Error('ルームが見つかりません');if(r.players.length>=2||r.phase!=='lobby')throw Error('このルームは満員、または開始済みです');}
- const id=r.players.length,p=player(String(body.name||`COMPANY ${id+1}`),id),key=token();r.players.push(p);sessions.set(key,{r,id,seen:new Map(),quotes:new Map()});return send(res,200,{token:key,state:snapshot(r,id)});
+ const id=r.players.length,p=player(companyName,id),key=token();r.players.push(p);sessions.set(key,{r,id,seen:new Map(),quotes:new Map()});return send(res,200,{token:key,state:snapshot(r,id)});
  }
  if(url.pathname==='/api/admin'){
  const key=String(body.key||'');if(key.length!==adminKey.length||!timingSafeEqual(Buffer.from(key),Buffer.from(adminKey)))return send(res,403,{error:'運営キーが違います'});
