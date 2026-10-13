@@ -1,0 +1,12 @@
+import {readFile,writeFile} from 'node:fs/promises';
+const input=process.argv[2];
+if(!input)throw Error('使い方: npm run configure:backend -- https://サービス名.onrender.com');
+const url=new URL(input);
+if(url.protocol!=='https:'||url.username||url.password||url.pathname!=='/'||url.search||url.hash)throw Error('HTTPSのサーバーURLだけを指定してください（パス・認証情報は不要）');
+const root=new URL('../',import.meta.url);
+const config=JSON.parse(await readFile(new URL('firebase.json',root),'utf8'));
+const header=config.hosting.headers.flatMap(x=>x.headers).find(x=>x.key==='Content-Security-Policy');
+header.value=header.value.replace(/connect-src[^;]+/,`connect-src 'self' ${url.origin}`);
+await writeFile(new URL('hosting-backend.json',root),JSON.stringify({apiOrigin:url.origin},null,2)+'\n');
+await writeFile(new URL('firebase.json',root),JSON.stringify(config,null,2)+'\n');
+console.log(`Firebaseからの接続先を ${url.origin} に設定しました。npm run build:hosting で配信ファイルを生成できます。`);

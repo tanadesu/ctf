@@ -3,7 +3,7 @@ services:
     name: orbis-mars-api
     runtime: node
     plan: free
-    buildCommand: node --check server.js && node --check simulation.js
+    buildCommand: node --check server.js && node --check simulation.js && node --test test/arcade-rewards.test.js
     startCommand: npm start
     healthCheckPath: /health
     envVars:
@@ -13,3 +13,7 @@ services:
         value: https://ctf1-99feb.web.app,https://ctf1-99feb.firebaseapp.com
       - key: ADMIN_KEY
         generateValue: true
+      - key: ZERO_ARCADE_API_URL
+        sync: false
+      - key: ZERO_ARCADE_API_KEY
+        sync: false

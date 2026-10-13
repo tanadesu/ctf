@@ -1,10 +1,12 @@
 import http from 'node:http';
 import {readFile} from 'node:fs/promises';
-import {randomBytes,timingSafeEqual} from 'node:crypto';
+import {randomBytes,randomUUID,timingSafeEqual} from 'node:crypto';
 import {performance} from 'node:perf_hooks';
 import {C} from './config.js';
 import {room,player,command,advance,snapshot} from './simulation.js';
 import {quote} from './economy.js';
+import {createRewardService} from './arcade-rewards.js';
+const rewards=createRewardService();
 const rooms=new Map(), sessions=new Map(), root=new URL('./',import.meta.url);
 const token=()=>randomBytes(24).toString('hex');
 if(process.env.NODE_ENV==='production'&&!process.env.ADMIN_KEY)throw Error('Renderの環境変数 ADMIN_KEY を設定してください');
@@ -12,9 +14,11 @@ const adminKey=process.env.ADMIN_KEY||token();
 const allowedOrigins=new Set((process.env.ALLOWED_ORIGINS||'').split(',').map(x=>x.trim()).filter(Boolean));
 const send=(res,status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(data));};
 let last=performance.now();
-function sync(){const now=performance.now(),dt=(now-last)/1000;last=now;for(const r of rooms.values())advance(r,dt);}
+function sync(){const now=performance.now(),dt=(now-last)/1000;last=now;for(const r of rooms.values()){advance(r,dt);rewards.capture(r);}}
 const timer=setInterval(sync,C.tickMs);timer.unref();
 const allowed=new Map([['/','index.html'],['/index.html','index.html'],['/game.js','game.js'],['/renderer.js','renderer.js'],['/network.js','network.js'],['/runtime-config.js','runtime-config.js'],['/config.js','config.js'],['/styles.css','styles.css'],['/assets/planet-horizon.png','assets/planet-horizon.png'],['/admin','admin.html']]);
+for(const type of Object.keys(C.buildings))allowed.set(`/assets/buildings/hex-v2/${type}.png`,`assets/buildings/hex-v2/${type}.png`);
+allowed.set('/reward-ui.js','reward-ui.js');
 const server=http.createServer(async(req,res)=>{
  try{
  const url=new URL(req.url,'http://localhost');
@@ -34,7 +38,7 @@ const server=http.createServer(async(req,res)=>{
  if(url.pathname==='/api/create'||url.pathname==='/api/join'){
  const companyName=typeof body.name==='string'?body.name.trim():'';
  if(!companyName)throw Error('会社名を入力してください');
- let r;if(url.pathname.endsWith('create')){if(rooms.size>=100)throw Error('ルーム上限です。運営にご連絡ください');let code;do{code=randomBytes(3).toString('hex').toUpperCase();}while(rooms.has(code));r=room(code,body.gameMode==='easy'?'easy':'normal');rooms.set(code,r);}else{r=rooms.get(String(body.code).toUpperCase().trim());if(!r)throw Error('ルームが見つかりません');if(r.players.length>=2||r.phase!=='lobby')throw Error('このルームは満員、または開始済みです');}
+ let r;if(url.pathname.endsWith('create')){if(rooms.size>=100)throw Error('ルーム上限です。運営にご連絡ください');let code;do{code=randomBytes(3).toString('hex').toUpperCase();}while(rooms.has(code));r=room(code,body.gameMode==='easy'?'easy':'normal');r.uuid=randomUUID();rooms.set(code,r);}else{r=rooms.get(String(body.code).toUpperCase().trim());if(!r)throw Error('ルームが見つかりません');if(r.players.length>=2||r.phase!=='lobby')throw Error('このルームは満員、または開始済みです');}
  const id=r.players.length,p=player(companyName,id),key=token();r.players.push(p);sessions.set(key,{r,id,seen:new Map(),quotes:new Map()});return send(res,200,{token:key,state:snapshot(r,id)});
  }
  if(url.pathname==='/api/admin'){
@@ -43,6 +47,7 @@ const server=http.createServer(async(req,res)=>{
  }
  const s=sessions.get(req.headers.authorization?.replace(/^Bearer /,''));if(!s)return send(res,401,{error:'参加し直してください（サーバー再起動後は復帰できません）'});
  const {r,id}=s,p=r.players[id];
+ if(url.pathname==='/api/reward'){const result=await rewards.reward(r,id,body.epoch);return send(res,result.status,result.body);}
  if(url.pathname==='/api/state')return send(res,200,snapshot(r,id));
  if(url.pathname==='/api/quote'){
  if(r.phase!=='playing'||r.paused)throw Error('試合が進行中ではありません');if(p.access[body.market]!==2)throw Error('市場へ参入してください');const q=quote(r.markets[body.market],body.good,body.side,body.n),key=token();
