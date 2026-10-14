@@ -132,7 +132,7 @@ PLAYWRIGHT_MODULE=/path/to/playwright CHROME_PATH=/path/to/chrome node test/brow
 
 ## ZERO ARCADE ユニコイン連携
 
-2人で15分を完走したとき、本人専用の結果画面で枚数・QR・期限を取得できます。途中終了は対象外です。0枚はQRなし、引き分け未設定時は「付与数確認中」と表示します。
+2人で15分を完走したとき、本人専用の結果画面で枚数・QR・期限を取得できます。途中終了は対象外です。引き分けは両者に5,000枚ずつ（運営管理画面で設定）。0枚はQRなし、未設定で422を返す間は「付与数確認中」と表示します。
 
 サーバーの秘密環境変数 `ZERO_ARCADE_API_URL` と `ZERO_ARCADE_API_KEY` を設定します。キーをFirebase用ファイルやGitへ保存しないでください。設定がなくてもゲームは動作します。
 

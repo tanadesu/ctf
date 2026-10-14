@@ -43,6 +43,18 @@ test('rematch and reused room codes get new IDs; old in-flight response stays wi
  await service.reward(r,0,1);release();await old;await service.reward(r,0,1);await service.reward(finished(),0,0);
  assert.equal(sent.length,3);assert.equal(new Set(sent.map(x=>x.playId)).size,3);assert.equal(sent[1].points,0);
 });
+test('configured draw gives each player 5000 coins and an individual cached QR',async()=>{
+ const sent=[];const service=createRewardService({env,fetchImpl:async(_,options)=>{
+  const payload=JSON.parse(options.body);sent.push(payload);
+  return {ok:true,status:200,json:async()=>({coins:5000,outcome:'draw',qrImageDataUrl:`data:image/png;base64,${Buffer.from(payload.playId).toString('base64')}`,expiresAt:1900000000})};
+ }});const r=finished();r.players[1].score=r.players[0].score;
+ const a=await service.reward(r,0,0),b=await service.reward(r,1,0);
+ assert.equal(a.body.coins,5000);assert.equal(b.body.coins,5000);
+ assert.equal(a.body.outcome,'draw');assert.equal(b.body.outcome,'draw');
+ assert.notEqual(a.body.qrImageDataUrl,b.body.qrImageDataUrl);
+ assert.equal(await service.reward(r,0,0),a);assert.equal(await service.reward(r,1,0),b);
+ assert.equal(sent.length,2);assert.ok(sent.every(p=>p.points===60&&p.opponentPoints===60));
+});
 test('draw 422 is retriable after configuration with the same payload',async()=>{
  const sent=[];const service=createRewardService({env,fetchImpl:async(_,options)=>{sent.push(options.body);return sent.length===1?{ok:false,status:422}:success(0);}});const r=finished();r.players[1].score=60;
  assert.match((await service.reward(r,0,0)).body.error,/付与数確認中/);assert.equal((await service.reward(r,0,0)).status,200);assert.equal(sent[0],sent[1]);
